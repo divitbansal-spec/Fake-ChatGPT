@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake ChatGPT</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Load Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- 3. Load Heroicons (for better icons) -->
+    <script type="module" src="https://unpkg.com/heroicons@2.1.3/dist/solid/index.js"></script>
+    
+    <style>
+        /* Custom base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* gray-900 */
+        }
+
+        /* Custom scrollbar for all elements */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2d3748; /* gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568; /* gray-600 */
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #718096; /* gray-500 */
+        }
+        
+        /* Sidebar layout */
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        /* Chat bubble styles */
+        .chat-bubble code:not(pre code) {
+            background-color: #111827; /* gray-900 */
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .chat-bubble .code-block-wrapper {
+            background-color: #111827; /* gray-900 */
+            border-radius: 8px;
+            margin: 8px 0;
+            overflow: hidden;
+            border: 1px solid #374151; /* gray-700 */
+        }
+        .chat-bubble .code-block-header {
+            display: flex;
+            justify-content: flex-end;
+            background-color: #1f2937; /* gray-800 */
+            padding: 4px 8px;
+        }
+        .chat-bubble .copy-btn {
+            background-color: #4b5563; /* gray-600 */
+            color: #e5e7eb; /* gray-200 */
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .chat-bubble .copy-btn:hover {
+            background-color: #6b7280; /* gray-500 */
+        }
+        .chat-bubble pre {
+            padding: 12px;
+            overflow-x: auto;
+            margin: 0;
+        }
+        .chat-bubble pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        .chat-bubble li {
+            margin-left: 1.5rem;
+            list-style: disc;
+        }
+        .chat-bubble p:not(:last-child) {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Mode Toggle Switch */
+        .mode-toggle {
+            display: flex;
+            background-color: #374151; /* gray-700 */
+            border-radius: 9999px;
+            padding: 4px;
+        }
+        .mode-toggle-btn {
+            flex: 1;
+            text-align: center;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #d1d5db; /* gray-300 */
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            background-color: transparent;
+        }
+        .mode-toggle-btn[data-active="true"] {
+            background-color: #f9fafb; /* gray-100 */
+            color: #111827; /* gray-900 */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        /* Typing indicator animation */
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #9ca3af; /* gray-400 */
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite both;
+            margin: 0 2px;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+        /* Modal tab styling */
+        .modal-tab-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            background-color: #374151; /* gray-700 */
+            color: #d1d5db; /* gray-300 */
+            transition: all 0.2s;
+        }
+        .modal-tab-btn[data-active="true"] {
+            background-color: #2563eb; /* blue-600 */
+            color: white;
+            font-weight: 500;
+        }
+        .modal-tab-content {
+            display: none;
+        }
+        .modal-tab-content[data-active="true"] {
+            display: block;
+        }
+        
+        /* Styles for the new Admin Panel */
+        #admin-panel {
+            border-top: 1px solid #4b5563; /* gray-600 */
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex h-[100dvh] overflow-hidden">
+
+    <!-- 
+      ==================================================
+      Sidebar (Chat History & Controls)
+      ==================================================
+    -->
+    <aside id="sidebar" class="flex flex-col w-64 h-full bg-gray-800 shadow-lg z-20 absolute sm:relative sm:translate-x-0 -translate-x-full">
+        <!-- Sidebar Header -->
+        <div class="flex items-center justify-between p-4 border-b border-gray-700">
+            <!-- v1.25 Change: Added version number -->
+            <div class="flex items-baseline gap-2">
+                <h1 id="app-title" class="text-xl font-bold text-white">ChatGPT</h1>
+                <span id="app-version" class="text-xs text-gray-400 font-medium">v 1.25</span>
+            </div>
+            <button id="close-sidebar-btn" class="sm:hidden text-gray-400 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                  <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+        
+        <!-- App Mode Toggle (Chat/Codex) -->
+        <div class="p-4 border-b border-gray-700">
+            <div class="mode-toggle">
+                <button class="mode-toggle-btn" id="mode-toggle-chat" data-mode="chat" data-active="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 inline-block -mt-1 mr-1">
+                      <path d="M10 9a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-1.5 0V9.75A.75.75 0 0 1 10 9Zm.75 4.008a.75.75 0 0 0-1.5 0v.008a.75.75 0 0 0 1.5 0v-.008ZM10 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17ZM2.5 10a7.5 7.5 0 1 1 15 0 7.5 7.5 0 0 1-15 0Z" />
+                    </svg>
+                    Chat
+                </button>
+                <button class="mode-toggle-btn" id="mode-toggle-codex" data-mode="codex" data-active="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 inline-block -mt-1 mr-1">
+                      <path fill-rule="evenodd" d="M6.28 5.22a.75.75 0 0 1 0 1.06L2.56 10l3.72 3.72a.75.75 0 0 1-1.06 1.06L.97 10.53a.75.75 0 0 1 0-1.06L5.22 5.22a.75.75 0 0 1 1.06 0Zm7.44 0a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L17.44 10l-3.72-3.72a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                    Codex
+                </button>
+            </div>
+        </div>
+
+        <!-- New Chat Button -->
+        <div class="p-4">
+            <button id="new-chat-btn" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                  <path fill-rule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+                </svg>
+                New Chat
+            </button>
+        </div>
+
+        <!-- Chat History List -->
+        <nav class="flex-1 overflow-y-auto px-4 space-y-2">
+            <h2 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Chat History</h2>
+            <ul id="chat-history-list" class="space-y-1">
+                <!-- Chat history items will be dynamically inserted here -->
+                <!-- Example:
+                <li class="rounded-lg group flex items-center justify-between">
+                    <button class="flex-grow text-left p-2 rounded-lg text-gray-200 truncate hover:bg-gray-700">
+                        History Item Title
+                    </button>
+                    <button class="flex-shrink-0 p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100">
+                        <svg (delete icon)></svg>
+                    </button>
+                </li>
+                -->
+            </ul>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-gray-700">
+            <button id="manage-plan-btn" class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-blue-400">
+                  <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
+                  <path fill-rule="evenodd" d="M9.344 3.071a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0l-1.125-1.125a.75.75 0 0 1 0-1.06L9.344 3.07Z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M13.656 3.071a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0l-1.125-1.125a.75.75 0 0 1 0-1.06L13.656 3.07Z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M1.5 13.656a.75.75 0 0 1 0-1.06l1.125-1.125a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0l-1.125-1.125Z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M1.5 9.344a.75.75 0 0 1 0-1.06l1.125-1.125a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0L1.5 9.344Z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M22.5 13.656a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125a.75.75 0 0 1 1.06 0l1.125-1.125Z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M22.5 9.344a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125a.75.75 0 0 1 1.06 0L22.5 9.344Z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M9.344 20.93a.75.75 0 0 1 1.06 0l1.125-1.125a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125Z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M13.656 20.93a.75.75 0 0 1 1.06 0l1.125-1.125a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125Z" clip-rule="evenodd" />
+                </svg>
+                <div class="text-left">
+                    <span class="font-medium text-white">Manage Plan</span>
+                    <span id="current-plan-sidebar" class="block text-sm text-gray-400">Plan: Free</span>
+                </div>
+            </button>
+        </div>
+    </aside>
+
+    <!-- 
+      ==================================================
+      Main Chat Area
+      ==================================================
+    -->
+    <div class="flex-1 flex flex-col h-full">
+        <!-- Chat Header -->
+        <header class="bg-gray-800 p-3 flex justify-between items-center shadow-md z-10 border-b border-gray-700">
+            <!-- Mobile Sidebar Toggle -->
+            <button id="open-sidebar-btn" class="sm:hidden text-gray-400 hover:text-white mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                  <path fill-rule="evenodd" d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm0 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
+                </svg>
+            </button>
+            
+            <!-- Model Selector -->
+            <div class="relative">
+                <select id="model-selector" class="bg-gray-700 text-white py-2 pl-4 pr-8 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+                    <option>gpt 3.5</option>
+                    <option>gpt 4</option>
+                    <option>gpt 4.1</option>
+                    <option>gpt 4-o mini</option>
+                    <option>gpt 4o</option>
+                    <option>gpt 5 mini</option>
+                    <option>gpt 5</option>
+                    <option>gpt 5 thinking</option>
+                    <option>gpt 5 instant</option>
+                    <option>gpt 5 pro</option>
+                    <option>gpt 6 pro</option>
+                    <option selected>gpt 6.1 pro ultra</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+            </div>
+            
+            <!-- Chat Title (Dynamic) -->
+            <div class="flex-1 text-center text-lg font-semibold text-gray-300 truncate px-4 hidden sm:block">
+                <span id="chat-title">New Chat</span>
+            </div>
+            
+            <!-- Spacer for alignment -->
+            <div class="w-10 sm:hidden"></div>
+
+        </header>
+
+        <!-- Chat Message Area -->
+        <main id="chat-area" class="flex-1 p-4 overflow-y-auto space-y-4">
+            <!-- Welcome Screen (default) -->
+            <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-gray-400">
+                <svg id="welcome-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 mb-4 text-gray-600">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <h2 id="welcome-title" class="text-2xl font-semibold text-gray-300">How can I help you today?</h2>
+                <p id="welcome-subtitle">Select a model above or just start typing.</p>
+            </div>
+            
+            <!-- Chat messages will be dynamically inserted here -->
+        </main>
+
+        <!-- Loading Indicator (hidden by default) -->
+        <div id="loading-indicator" class="hidden p-4">
+            <div class="flex max-w-lg rounded-xl p-3 bg-gray-700 items-center justify-start chat-bubble model">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-white">
+                      <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
+                      <path fill-rule="evenodd" d="M9.344 3.071a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0l-1.125-1.125a.75.75 0 0 1 0-1.06L9.344 3.07Z" clip-rule="evenodd" />
+                      <path fill-rule="evenodd" d="M13.656 3.071a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0l-1.125-1.125a.75.75 0 0 1 0-1.06L13.656 3.07Z" clip-rule="evenodd" />
+                      <path fill-rule="evenodd" d="M1.5 13.656a.75.75 0 0 1 0-1.06l1.125-1.125a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0l-1.125-1.125Z" clip-rule="evenodd" />
+                      <path fill-rule="evenodd" d="M1.5 9.344a.75.75 0 0 1 0-1.06l1.125-1.125a.75.75 0 0 1 1.06 0l1.125 1.125a.75.75 0 0 1 0 1.06l-1.125 1.125a.75.75 0 0 1-1.06 0L1.5 9.344Z" clip-rule="evenodd" />
+                      <path fill-rule="evenodd" d="M22.5 13.656a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125a.75.75 0 0 1 1.06 0l1.125-1.125Z" clip-rule="evenodd" />
+                      <path fill-rule="evenodd" d="M22.5 9.344a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125a.75.75 0 0 1 1.06 0L22.5 9.344Z" clip-rule="evenodd" />
+                      <path fill-rule="evenodd" d="M9.344 20.93a.75.75 0 0 1 1.06 0l1.125-1.125a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125Z" clip-rule="evenodd" />
+                      <path fill-rule="evenodd" d="M13.656 20.93a.75.75 0 0 1 1.06 0l1.125-1.125a.75.75 0 0 1 0-1.06l-1.125-1.125a.75.75 0 0 1-1.06 0l-1.125 1.125a.75.75 0 0 1 0 1.06l1.125 1.125Z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <footer class="p-4 bg-gray-800 border-t border-gray-700">
+            <div class="max-w-3xl mx-auto">
+                <form id="chat-form" class="flex items-end bg-gray-700 rounded-xl shadow-lg border border-gray-600 focus-within:ring-2 focus-within:ring-blue-500">
+                    <textarea id="user-input" class="flex-grow bg-transparent p-4 text-white placeholder-gray-400 resize-none focus:outline-none rounded-xl max-h-60" placeholder="Message ChatGPT..." rows="1"></textarea>
+                    <button type="submit" id="send-button" class="p-3 text-blue-400 hover:text-blue-500 transition-colors duration-200 disabled:text-gray-500 disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 
+      ==================================================
+      Subscription Modal
+      ==================================================
+    -->
+    <div id="subscription-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay overflow-y-auto py-10">
+        <div class="bg-gray-800 text-white rounded-lg shadow-xl p-6 w-full max-w-6xl border border-gray-700 m-4">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Manage Subscription</h2>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-200 text-3xl">&times;</button>
+            </div>
+            
+            <div class="mb-4 text-lg">
+                Your current plan is: <span id="modal-current-plan" class="font-bold text-blue-400">Free</span>
+            </div>
+            
+            <!-- Modal Tabs -->
+            <div class="flex space-x-2 border-b border-gray-700 mb-4" id="modal-tab-container">
+                <button class="modal-tab-btn" data-tab="pricing" data-active="true">Pricing</button>
+                <button class="modal-tab-btn" data-tab="access" data-active="false">Model Access</button>
+                <button class="modal-tab-btn" data-tab="details" data-active="false">Model Details</button>
+                <button class="modal-tab-btn" data-tab="redeem" data-active="false">Redeem</button>
+                <button class="modal-tab-btn hidden" data-tab="admin" data-active="false" id="admin-tab-btn">Admin Panel</button>
+            </div>
+            
+            <!-- Tab Content: Pricing -->
+            <div class="modal-tab-content" data-tab-content="pricing" data-active="true">
+                <h3 class="text-lg font-bold mb-3 text-blue-400">Subscription Pricing (INR/USD/EUR)</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-900 rounded-lg text-sm text-center">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="py-2 px-3 text-left font-semibold text-gray-300">Plan</th>
+                                <th class="py-2 px-3 font-semibold text-gray-300">Monthly</th>
+                                <th class="py-2 px-3 font-semibold text-gray-300">Annual</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 text-left font-medium">Free</td><td class="py-2 px-3">₹0 / $0.00 / €0.00</td><td class="py-2 px-3">₹0 / $0.00 / €0.00</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 text-left font-medium">Go</td><td class="py-2 px-3">₹400 / $4.70 / €4.35</td><td class="py-2 px-3">₹4,000 / $47.00 / €43.50</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 text-left font-medium">Plus</td><td class="py-2 px-3">₹1,900 / $22.35 / €20.65</td><td class="py-2 px-3">₹100,000 / $1,176.50 / €1,087.00</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 text-left font-medium">Pro</td><td class="py-2 px-3">₹19,900 / $234.00 / €216.00</td><td class="py-2 px-3">₹250,000 / $2,941.00 / €2,717.50</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Model Access Tiers -->
+            <div class="modal-tab-content" data-tab-content="access" data-active="false">
+                <h3 class="text-lg font-bold mb-3 text-blue-400">Model Access Tiers (Messages per period)</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-900 rounded-lg text-sm">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="py-2 px-3 text-left font-semibold text-gray-300">Model</th>
+                                <th class="py-2 px-3 text-center font-semibold text-gray-300">Free</th>
+                                <th class="py-2 px-3 text-center font-semibold text-gray-300">Go</th>
+                                <th class="py-2 px-3 text-center font-semibold text-gray-300">Plus</th>
+                                <th class="py-2 px-3 text-center font-semibold text-gray-300">Pro (Unlimited)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 3.5 (Basic)</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 4 (Standard)</td><td class="py-2 px-3 text-center">500/day</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 4.1 (Fast)</td><td class="py-2 px-3 text-center">100/day</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 4-o mini (Efficient)</td><td class="py-2 px-3 text-center">50/day</td><td class="py-2 px-3 text-center">70/day</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 4o (Premium Speed)</td><td class="py-2 px-3 text-center text-red-400">None</td><td class="py-2 px-3 text-center">30/day</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 5 mini / 5 / thinking / instant</td><td class="py-2 px-3 text-center">**10/month**</td><td class="py-2 px-3 text-center">**20/day**</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 5 pro (High Creativity)</td><td class="py-2 px-3 text-center text-red-400">None</td><td class="py-2 px-3 text-center">**5/day**</td><td class="py-2 px-3 text-center">**200/month**</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 6 pro (Flagship)</td><td class="py-2 px-3 text-center">**1/year**</td><td class="py-2 px-3 text-center">**5/month**</td><td class="py-2 px-3 text-center">**10/day**</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-2 px-3 font-medium">gpt 6.1 pro ultra (Bleeding Edge)</td><td class="py-2 px-3 text-center text-red-400">None</td><td class="py-2 px-3 text-center">**1/day**</td><td class="py-2 px-3 text-center">**50/month**</td><td class="py-2 px-3 text-center text-green-400">Unlimited</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tab Content: Model Characteristics -->
+            <div class="modal-tab-content" data-tab-content="details" data-active="false">
+                <h3 class="text-lg font-bold mb-3 text-blue-400">Detailed Model Characteristics</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-900 rounded-lg text-sm">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="py-2 px-3 text-left font-semibold text-gray-300 w-1/5">Model</th>
+                                <th class="py-2 px-3 text-left font-semibold text-gray-300 w-1/5">Speed / Latency</th>
+                                <th class="py-2 px-3 text-left font-semibold text-gray-300 w-2/5">Quality / Persona</th>
+                                <th class="py-2 px-3 text-left font-semibold text-gray-300 w-1/5">Ideal Use Case</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-3 px-3 font-medium">gpt 3.5 (Basic)</td><td class="py-3 px-3 text-red-400 font-bold">Very Slow (~4.0s)</td><td class="py-3 px-3">Older, slower, and very basic. Responses are **awkward, short, and often irrelevant** with simple vocabulary.</td><td class="py-3 px-3">Casual, non-critical testing, simple facts.</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-3 px-3 font-medium">gpt 4 / 4.1 (Standard)</td><td class="py-3 px-3 text-yellow-400">Slow to Medium (~2.5-3.5s)</td><td class="py-3 px-3">Competent and factual, but generic and slightly verbose. **Lacks creative flair** or deep insight.</td><td class="py-3 px-3">Standard information retrieval, drafting emails.</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-3 px-3 font-medium">gpt 4-o mini / 4o (Premium Speed)</td><td class="py-3 px-3 text-green-400">Fast (~1.5-2.5s)</td><td class="py-3 px-3">Clear, efficient, and well-structured. **Prioritizes direct answers** like an optimized query engine.</td><td class="py-3 px-3">Quick summaries, rapid problem-solving, code debugging.</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-3 px-3 font-medium">gpt 5 (All variants)</td><td class="py-3 px-3 text-green-400">Very Fast (~1.0s)</td><td class="py-3 px-3">Highly advanced, **creative, and insightful**. Responses are detailed, slightly formal, and often use organized markdown structure.</td><td class="py-3 px-3">Creative writing, complex analysis, structured research.</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-3 px-3 font-medium">gpt 6 pro (Flagship)</td><td class="py-3 px-3 text-blue-400 font-bold">Instantaneous (~0.5s)</td><td class="py-3 px-3">The **most advanced** AI. Profoundly insightful, perfectly confident, and **authoritative**. Gets straight to the core with elegance.</td><td class="py-3 px-3">Executive summaries, critical decision support, high-level strategy.</td></tr>
+                            <tr class="border-t border-gray-700 hover:bg-gray-800"><td class="py-3 px-3 font-medium">gpt 6.1 pro ultra (Bleeding Edge)</td><td class="py-3 px-3 text-purple-400 font-bold">Near-Instant (~0.2s)</td><td class="py-3 px-3">**Unprecedented and predictive**. Far surpasses human expert analysis in speed and depth. Hyper-contextual.</td><td class="py-3 px-3">Real-time strategic forecasting, autonomous systems, scientific discovery.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Redeem Code -->
+            <div class="modal-tab-content" data-tab-content="redeem" data-active="false">
+                <div class="space-y-4">
+                    <label for="redeem-code-input" class="block text-sm font-medium text-gray-300">Enter Subscription Code</label>
+                    <input type="text" id="redeem-code-input" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Redeem your access code...">
+                    <p id="redeem-error" class="text-red-500 text-sm h-4"></p>
+                    <button id="redeem-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">Redeem</button>
+                </div>
+            </div>
+            
+            <!-- Tab Content: Admin Panel (Hidden) -->
+            <div class="modal-tab-content" data-tab-content="admin" data-active="false">
+                <div id="admin-password-prompt">
+                    <h3 class="text-lg font-bold mb-3 text-yellow-400">Admin Access Required</h3>
+                    <div class="space-y-4">
+                        <label for="admin-password-input" class="block text-sm font-medium text-gray-300">Enter Admin Password</label>
+                        <input type="password" id="admin-password-input" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+                        <p id="admin-password-error" class="text-red-500 text-sm h-4"></p>
+                        <button id="admin-password-submit" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg transition-colors">Unlock</button>
+                    </div>
+                </div>
+                
+                <div id="admin-panel" class="hidden">
+                    <h3 class="text-lg font-bold mb-3 text-yellow-400">Code Generator</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="admin-generate-plan" class="block text-sm font-medium text-gray-300">Select Plan</label>
+                            <select id="admin-generate-plan" class="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="go">Go</option>
+                                <option value="plus">Plus</option>
+                                <option value="pro">Pro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="admin-generate-duration" class="block text-sm font-medium text-gray-300">Select Duration</label>
+                            <select id="admin-generate-duration" class="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="one-time">One-Time (Expires on use)</option>
+                                <option value="monthly">Monthly (Reusable)</option>
+                                <option value="yearly">Yearly (Reusable)</option>
+                            </select>
+                        </div>
+                        <button id="admin-generate-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">Generate Code</button>
+                        <div>
+                            <label for="admin-generated-code" class="block text-sm font-medium text-gray-300">Generated Code</label>
+                            <input type="text" id="admin-generated-code" class="mt-1 w-full bg-gray-900 border border-gray-600 rounded-lg p-2 text-gray-300" readonly placeholder="Click 'Generate' to create a code...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 
+      ==================================================
+      v1.25 Change: Confirmation Modal (for delete)
+      ==================================================
+    -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-overlay">
+        <div class="bg-gray-800 text-white rounded-lg shadow-xl p-6 w-full max-w-sm border border-gray-700 m-4">
+            <h3 id="confirm-modal-title" class="text-lg font-bold mb-4">Are you sure?</h3>
+            <p id="confirm-modal-text" class="text-gray-300 mb-6">This action cannot be undone.</p>
+            <div class="flex justify-end gap-4">
+                <button id="confirm-modal-cancel" class="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>
+                <button id="confirm-modal-confirm" class="py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors">Delete</button>
+            </div>
+        </div>
+    </div>
+
+
+   
+ <script src="script.js">   </script>
+</body>
+</html>
